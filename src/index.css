@@ -17,9 +17,8 @@ code {
   height: 100vh;
 }
 
-.main{
+.main {
   border: 1px solid #000;
   width: 250px;
-  height: 100px;
-
+  margin: 100px auto 0;
 }
