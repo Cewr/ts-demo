@@ -11,14 +11,3 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
-
-.App {
-  width: 100vw;
-  height: 100vh;
-}
-
-.main {
-  border: 1px solid #000;
-  width: 250px;
-  margin: 100px auto 0;
-}
