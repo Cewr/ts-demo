@@ -91,23 +91,22 @@ export default function Chess(): ReactElement {
             },
             body: JSON.stringify({ turn: 'black', list: ls, diff: -1, win: false })
         })
-    }, [isOver])
+    }, [])
 
     useEffect(() => {
         const timer = window.setTimeout(() => {
             fetch(url).then(res => res.json()).then(res => {
-                const { turn, list, diff, win } = res;
+                const { turn, list, diff: diff2, win } = res;
                 setList(list)
-                setColorType(turn);
-                setDiff(diff);
-                setIsOver(win)
+                turn !== colorType && setColorType(turn);
+                diff2 !== diff && setDiff(diff);
+                win && win !== isOver && setIsOver(turn)
             })
         }, 1000);
         return () => {
             window.clearTimeout(timer)
         }
-    }, [list, colorType])
-
+    }, [list, colorType, diff, isOver])
 
     return (
         <div className='chess'>
@@ -129,6 +128,14 @@ export default function Chess(): ReactElement {
                                 setList(ls)
                                 setColorType('black');
                                 setDiff(-1)
+
+                                fetch(url, {
+                                    method: 'post',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ turn: 'black', list: ls, diff: -1, win: false })
+                                })
                             }}
                         >
                             确定
@@ -152,7 +159,7 @@ export default function Chess(): ReactElement {
                                     setList(arr);
                                     setColorType(c);
                                     setDiff(idx)
-                                    setIsOver(win && colorType)
+                                    win && setIsOver(colorType)
 
                                     fetch(url, {
                                         method: 'post',
