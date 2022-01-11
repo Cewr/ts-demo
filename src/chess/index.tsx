@@ -2,8 +2,6 @@ import React, { ReactElement, useState, useEffect } from 'react'
 import './style.scss'
 import cx from 'classnames'
 
-const url = 'http://10.5.84.50:3000/data';
-
 const ls: number[] = [];
 let num = 15 * 15;
 while (num--) {
@@ -13,7 +11,18 @@ while (num--) {
 type ItemType = number | 'white' | 'black';
 type ColorType = 'white' | 'black';
 
-const checkWin = (list: ItemType[], color: ColorType, index: number) => {
+const url = 'http://10.5.84.50:3000/data';
+const fetchApi = (data?: { turn: ColorType, diff: number, win: boolean, list: ItemType[] }) => (
+    fetch(url, {
+        method: data ? 'post' : 'get',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: data ? JSON.stringify(data) : undefined
+    }).then(res => res.json())
+)
+
+const checkWin = (list: ItemType[], index: number) => {
     const win_black = 'black,black,black,black,black';
     const win_white = 'white,white,white,white,white';
     const size = 15;
@@ -84,23 +93,17 @@ export default function Chess(): ReactElement {
     const [isOver, setIsOver] = useState<ColorType | false>(false)
 
     useEffect(() => {
-        fetch(url, {
-            method: 'post',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ turn: 'black', list: ls, diff: -1, win: false })
-        })
+        fetchApi({ turn: 'black', diff: -1, win: false, list: ls })
     }, [])
 
     useEffect(() => {
         const timer = window.setTimeout(() => {
-            fetch(url).then(res => res.json()).then(res => {
-                const { turn, list, diff: diff2, win } = res;
+            fetchApi().then(res => {
+                const { turn, diff: diff2, win, list } = res;
                 setList(list)
                 turn !== colorType && setColorType(turn);
                 diff2 !== diff && setDiff(diff);
-                win && win !== isOver && setIsOver(turn)
+                win !== isOver && setIsOver(win && turn)
             })
         }, 1000);
         return () => {
@@ -129,13 +132,7 @@ export default function Chess(): ReactElement {
                                 setColorType('black');
                                 setDiff(-1)
 
-                                fetch(url, {
-                                    method: 'post',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    },
-                                    body: JSON.stringify({ turn: 'black', list: ls, diff: -1, win: false })
-                                })
+                                fetchApi({ turn: 'black', diff: -1, win: false, list: ls });
                             }}
                         >
                             确定
@@ -154,24 +151,18 @@ export default function Chess(): ReactElement {
                                     arr[idx] = colorType;
 
                                     const c = colorType === 'black' ? 'white' : 'black';
-                                    const win = checkWin(arr, c, idx)
+                                    const win = checkWin(arr, idx)
 
                                     setList(arr);
                                     setColorType(c);
                                     setDiff(idx)
                                     win && setIsOver(colorType)
 
-                                    fetch(url, {
-                                        method: 'post',
-                                        headers: {
-                                            'Content-Type': 'application/json'
-                                        },
-                                        body: JSON.stringify({
-                                            turn: win ? colorType : c,
-                                            list: arr,
-                                            diff: idx,
-                                            win
-                                        })
+                                    fetchApi({
+                                        turn: win ? colorType : c,
+                                        diff: idx,
+                                        win,
+                                        list: arr
                                     })
                                 }
                             }}

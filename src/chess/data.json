@@ -1,6 +1,8 @@
 {
   "data": {
     "turn": "black",
+    "diff": -1,
+    "win": false,
     "list": [
       224,
       223,
@@ -227,8 +229,6 @@
       2,
       1,
       0
-    ],
-    "diff": -1,
-    "win": false
+    ]
   }
 }
