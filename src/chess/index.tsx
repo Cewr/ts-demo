@@ -11,15 +11,16 @@ while (num--) {
 type ItemType = number | 'white' | 'black';
 type ColorType = 'white' | 'black';
 
-const url = 'http://10.5.84.50:3000/data';
-const fetchApi = (data?: { turn: ColorType, diff: number, win: boolean, list: ItemType[] }) => (
+// const url = 'http://10.5.84.50:3000/data';
+const url = 'http://127.0.0.1:8000/service/chess/';
+const fetchApi = (data?: { turn: ColorType, diff: number, win: boolean, list: string }) => (
     fetch(url, {
         method: data ? 'post' : 'get',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
         },
         body: data ? JSON.stringify(data) : undefined
-    }).then(res => res.json())
+    }).then(res => res.json()).catch((e) => console.log('e>>>>>', e))
 )
 
 const checkWin = (list: ItemType[], index: number) => {
@@ -93,16 +94,16 @@ export default function Chess(): ReactElement {
     const [isOver, setIsOver] = useState<ColorType | false>(false)
 
     useEffect(() => {
-        fetchApi({ turn: 'black', diff: -1, win: false, list: ls })
+        fetchApi({ turn: 'black', diff: -1, win: false, list: ls.join() })
     }, [])
 
     useEffect(() => {
         const timer = window.setTimeout(() => {
             fetchApi().then(res => {
-                const { turn, diff: diff2, win, list } = res;
+                const { turn, diff: diff2, win, list = [] } = res || {};
                 setList(list)
                 turn !== colorType && setColorType(turn);
-                diff2 !== diff && setDiff(diff);
+                diff2 !== diff && setDiff(diff2);
                 win !== isOver && setIsOver(win && turn)
             })
         }, 1000);
@@ -132,7 +133,7 @@ export default function Chess(): ReactElement {
                                 setColorType('black');
                                 setDiff(-1)
 
-                                fetchApi({ turn: 'black', diff: -1, win: false, list: ls });
+                                fetchApi({ turn: 'black', diff: -1, win: false, list: ls.join() });
                             }}
                         >
                             确定
@@ -144,9 +145,9 @@ export default function Chess(): ReactElement {
                     {list.map((item, idx) => (
                         <div
                             key={idx}
-                            className={cx("reseau-lattice", { exist: typeof item === 'string' })}
+                            className={cx("reseau-lattice", { exist: isNaN(item as number) })}
                             onClick={() => {
-                                if (typeof item !== 'string' && colorType) {
+                                if (!isNaN(item as number) && colorType) {
                                     const arr = JSON.parse(JSON.stringify(list));
                                     arr[idx] = colorType;
 
@@ -162,7 +163,7 @@ export default function Chess(): ReactElement {
                                         turn: win ? colorType : c,
                                         diff: idx,
                                         win,
-                                        list: arr
+                                        list: arr.join(),
                                     })
                                 }
                             }}
