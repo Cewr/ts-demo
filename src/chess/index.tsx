@@ -164,8 +164,8 @@ export default function Chess(): ReactElement {
                                     const arr = JSON.parse(JSON.stringify(list));
                                     arr[idx] = turn;
 
-                                    const c = turn === 'black' ? 'white' : 'black';
                                     const win = checkWin(arr, idx)
+                                    const c = win ? turn : (turn === 'black' ? 'white' : 'black');
                                     setOriginData({
                                         turn: c,
                                         diff: idx,
