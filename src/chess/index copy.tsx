@@ -8,21 +8,22 @@ while (num--) {
     ls.push(num)
 }
 
-interface DataType {
-    win: boolean,
-    diff: number,
-    turn: 'white' | 'black',
-    list: (number | 'white' | 'black')[]
-}
-const initData: DataType = {
-    win: false,
-    diff: -1,
-    turn: 'black',
-    list: ls
-}
+type ItemType = number | 'white' | 'black';
+type ColorType = 'white' | 'black';
 
+// const url = 'http://10.5.84.50:3000/data';
+const url = 'http://127.0.0.1:8000/service/chess/';
+const fetchApi = (data?: { turn: ColorType, diff: number, win: boolean, list: string }) => (
+    fetch(url, {
+        method: data ? 'post' : 'get',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: data ? JSON.stringify(data) : undefined
+    }).then(res => res.json()).catch((e) => console.log('e>>>>>', e))
+)
 
-const checkWin = (list: DataType["list"], index: number) => {
+const checkWin = (list: ItemType[], index: number) => {
     const win_black = 'black,black,black,black,black';
     const win_white = 'white,white,white,white,white';
     const size = 15;
@@ -31,13 +32,13 @@ const checkWin = (list: DataType["list"], index: number) => {
     const y = (index - x) / size;
 
     // ——
-    const ls_a: DataType['list'] = [];
+    const ls_a: ItemType[] = [];
     // |
-    const ls_b: DataType['list'] = [];
+    const ls_b: ItemType[] = [];
     // \
-    const ls_c: DataType['list'] = [];
+    const ls_c: ItemType[] = [];
     // /
-    const ls_d: DataType['list'] = [];
+    const ls_d: ItemType[] = [];
 
     // ------------------------------------------------------------------
     const arr: number[][] = []
@@ -87,66 +88,52 @@ const checkWin = (list: DataType["list"], index: number) => {
 }
 
 export default function Chess(): ReactElement {
-    const [originData, setOriginData] = useState<DataType>(initData);
-
-    const [mySocket, setMySocket] = useState<WebSocket | null>(null)
+    const [list, setList] = useState<ItemType[]>(ls);
+    const [colorType, setColorType] = useState<ColorType>('black');
+    const [diff, setDiff] = useState<number>(-1);
+    const [isOver, setIsOver] = useState<ColorType | false>(false)
 
     useEffect(() => {
-        if ("WebSocket" in window) {
-            // 打开一个 web socket
-            var ws = new WebSocket("ws://127.0.0.1:5678");
-            // 连接建立后的回调函数
-            ws.onopen = function () {
-                // Web Socket 已连接上，使用 send() 方法发送数据
-                console.log('onopen>>>>>')
-                ws.send(JSON.stringify(initData));
-            };
-
-            // 接收到服务器消息后的回调函数
-            ws.onmessage = function (evt) {
-                var received_msg = evt.data;
-                console.count('count')
-                if (received_msg.indexOf("sorry") === -1) {
-                    const msg = JSON.parse(received_msg)
-
-                    console.log('msg>>>>>', msg.diff)
-
-                    if ('diff' in msg) setOriginData(msg)
-                }
-            };
-
-            // 连接关闭后的回调函数
-            ws.onclose = function () {
-                // 关闭 websocket
-                alert("连接已关闭...");
-            };
-            setMySocket(ws)
-        }
-        else {
-            // 浏览器不支持 WebSocket
-            console.log("您的浏览器不支持 WebSocket!");
-        }
+        fetchApi({ turn: 'black', diff: -1, win: false, list: ls.join() })
     }, [])
 
-    const { win, diff, turn, list } = originData
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            fetchApi().then(res => {
+                const { turn, diff: diff2, win, list = [] } = res || {};
+                setList(list)
+                turn !== colorType && setColorType(turn);
+                diff2 !== diff && setDiff(diff2);
+                win !== isOver && setIsOver(win && turn)
+            })
+        }, 1000);
+        return () => {
+            window.clearTimeout(timer)
+        }
+    }, [list, colorType, diff, isOver])
 
     return (
         <div className='chess'>
             <div className="bg">
-                <div className={cx("chess-white", { fall: turn === 'white' })} />
-                <div className={cx("chess-black", { fall: turn === 'black' })} />
+                <div className={cx("chess-white", { fall: colorType === 'white' })} />
+                <div className={cx("chess-black", { fall: colorType === 'black' })} />
 
-                {win && <div className="result">
+                {isOver && <div className="result">
                     <div className='tips'>
                         <div>
                             {{
                                 'black': '黑',
                                 'white': '白',
-                            }[turn]}棋 胜利
+                            }[isOver]}棋 胜利
                         </div>
                         <button
                             onClick={() => {
-                                setOriginData(initData)
+                                setIsOver(false)
+                                setList(ls)
+                                setColorType('black');
+                                setDiff(-1)
+
+                                fetchApi({ turn: 'black', diff: -1, win: false, list: ls.join() });
                             }}
                         >
                             确定
@@ -160,29 +147,24 @@ export default function Chess(): ReactElement {
                             key={idx}
                             className={cx("reseau-lattice", { exist: isNaN(item as number) })}
                             onClick={() => {
-                                if (!isNaN(item as number)) {
+                                if (!isNaN(item as number) && colorType) {
                                     const arr = JSON.parse(JSON.stringify(list));
-                                    arr[idx] = turn;
+                                    arr[idx] = colorType;
 
-                                    const c = turn === 'black' ? 'white' : 'black';
+                                    const c = colorType === 'black' ? 'white' : 'black';
                                     const win = checkWin(arr, idx)
-                                    setOriginData({
-                                        turn: c,
+
+                                    setList(arr);
+                                    setColorType(c);
+                                    setDiff(idx)
+                                    win && setIsOver(colorType)
+
+                                    fetchApi({
+                                        turn: win ? colorType : c,
                                         diff: idx,
-                                        list: arr,
-                                        win
+                                        win,
+                                        list: arr.join(),
                                     })
-                                    try {
-                                        mySocket?.send(JSON.stringify({
-                                            turn: c,
-                                            diff: idx,
-                                            list: arr,
-                                            win
-                                        }))
-                                    }
-                                    catch (e) {
-                                        alert(e)
-                                    }
                                 }
                             }}
                         >
